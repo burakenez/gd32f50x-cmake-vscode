@@ -1,0 +1,144 @@
+/*!
+    \file    main.c
+    \brief   ADC resolution 
+
+    \version 2026-02-25, V1.0.4, firmware for GD32F50x
+*/
+
+/*
+    Copyright (c) 2026, GigaDevice Semiconductor Inc.
+
+    Redistribution and use in source and binary forms, with or without modification, 
+are permitted provided that the following conditions are met:
+
+    1. Redistributions of source code must retain the above copyright notice, this 
+       list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright notice, 
+       this list of conditions and the following disclaimer in the documentation 
+       and/or other materials provided with the distribution.
+    3. Neither the name of the copyright holder nor the names of its contributors 
+       may be used to endorse or promote products derived from this software without 
+       specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED 
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. 
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT 
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR 
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY 
+OF SUCH DAMAGE.
+*/
+
+#include "gd32f50x.h"
+#include "systick.h"
+#include <stdio.h>
+#include "gd32f503v_eval.h"
+
+#define BOARD_ADC_CHANNEL   ADC_CHANNEL_10
+#define ADC_GPIO_PORT_RCU   RCU_GPIOC
+#define ADC_GPIO_PORT       GPIOC
+#define ADC_GPIO_PIN        GPIO_PIN_0
+
+uint16_t adc_value;
+
+/* configure the RCU peripheral */
+void rcu_config(void);
+/* configure the GPIO peripheral */
+void gpio_config(void);
+/* configure the ADC peripheral */
+void adc_config(void);
+
+/*!
+    \brief      main function
+    \param[in]  none
+    \param[out] none
+    \retval     none
+*/
+int main(void)
+{
+    /* system clocks configuration */
+    rcu_config();
+    /* systick configuration */
+    systick_config();
+    /* GPIO configuration */
+    gpio_config();
+    /* ADC configuration */
+    adc_config();
+    /* configures COM port */
+    gd_eval_com_init(EVAL_COM0);
+  
+    adc_software_trigger_enable(ADC1, ADC_ROUTINE_CHANNEL);
+  
+    while(1){        
+        adc_flag_clear(ADC1, ADC_FLAG_EORC);
+        while(SET != adc_flag_get(ADC1, ADC_FLAG_EORC)){
+        }
+        adc_value = ADC_RDATA(ADC1);
+        printf("6B: 0x%x\r\n", adc_value);
+        printf("\r\n ***********************************\r\n");
+        delay_1ms(500);
+    }
+}
+
+/*!
+    \brief      configure the different system clocks
+    \param[in]  none
+    \param[out] none
+    \retval     none
+*/
+void rcu_config(void)
+{
+    /* enable GPIOA clock */
+    rcu_periph_clock_enable(ADC_GPIO_PORT_RCU);
+    /* enable ADC1 clock */
+    rcu_periph_clock_enable(RCU_ADC1);
+    /* config ADC clock */
+    rcu_adc_clock_config(RCU_CKADC_CKAPB2_DIV6);
+}
+
+/*!
+    \brief      configure the GPIO peripheral
+    \param[in]  none
+    \param[out] none
+    \retval     none
+*/
+void gpio_config(void)
+{
+    /* config the GPIO as analog mode */
+    gpio_mode_set(GPIOC, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, ADC_GPIO_PIN);
+}
+
+/*!
+    \brief      configure the ADC peripheral
+    \param[in]  none
+    \param[out] none
+    \retval     none
+*/
+void adc_config(void)
+{
+    /* ADC continuous function enable */
+    adc_special_function_config(ADC1, ADC_CONTINUOUS_MODE, ENABLE);
+    adc_special_function_config(ADC1, ADC_SCAN_MODE, DISABLE);
+
+    /* ADC data alignment config */
+    adc_data_alignment_config(ADC1, ADC_DATAALIGN_RIGHT);
+    /* ADC sync mode config */
+    adc_sync_mode_config(ADC_MODE_FREE);
+    /* ADC channel length config */
+    adc_channel_length_config(ADC1, ADC_ROUTINE_CHANNEL, 1);
+
+    /* ADC routine channel config */
+    adc_routine_channel_config(ADC1, 0, BOARD_ADC_CHANNEL, ADC_SAMPLETIME_55POINT5);
+    /* ADC trigger config */
+    adc_external_trigger_config(ADC1, ADC_ROUTINE_CHANNEL, EXTERNAL_TRIGGER_DISABLE);
+
+    /* ADC resolusion 6B */
+    adc_resolution_config(ADC1, ADC_RESOLUTION_6B);
+
+    /* enable ADC interface */
+    adc_enable(ADC1);
+    delay_1ms(1U);
+}
