@@ -1,0 +1,10 @@
+project(GD32F503V_EVAL LANGUAGES C CXX ASM)
+
+add_library(GD32F503V_EVAL INTERFACE)
+
+target_include_directories(GD32F503V_EVAL INTERFACE
+    ${DRIVERS_DIR}/BSP/GD32F503V_EVAL
+    ${DRIVERS_DIR}/BSP/GD32F503V_EVAL/LCD_Common
+    )
+
+target_link_libraries(GD32F503V_EVAL INTERFACE GD32F50x_standard_peripheral)
